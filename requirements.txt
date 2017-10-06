@@ -1,2 +1,3 @@
 Scrapy==1.4.0
 SQLAlchemy==1.1.14
+scrapy-proxies==0.3

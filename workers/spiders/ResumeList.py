@@ -1,36 +1,53 @@
 # -*- coding: utf-8 -*-
 import scrapy
 from scrapy import Selector
-from scrapy.contrib.spiders import CrawlSpider, Rule
-from scrapy.contrib.linkextractors import LinkExtractor
+from scrapy.spiders import CrawlSpider, Rule
+from scrapy.linkextractors import LinkExtractor
 
-from workers.items import ResumeListItem
+from workers.items import ResumeItem
 
 
 class ResumeListSpider(scrapy.Spider):
     name = 'resumelist'
-    allowed_domains = ['https://www.work.ua']
+    # allowed_domains = ['www.work.ua']
     start_urls = [
         'https://www.work.ua/resumes-python-программист/?page=1',
     ]
 
-    rules = (
-        Rule(LinkExtractor(allow=('page=\d+$',)), follow=True),
-    )
+    # rules = (
+    #     Rule(LinkExtractor(allow='https://www.work.ua/resumes-python-программист/?page=*'), follow=True),
+    #     Rule(LinkExtractor(allow='https://www.work.ua/resumes/*'), callback='parse_item'),
+    # )
 
     def parse(self, response):
-        # Неправильно извлекалось
-        # hxs = Selector(response=response)
-        # all = hxs.css('div.resume-link')
+        resume_links = response.css('div.resume-link > h2 > a::attr(href)').extract()
 
-        # Так правильно извлекается, но мне кажеться както не пофеншую
-        # и не соответствует примерам из докуменации
-        all_text_list = response.css('div.resume-link').extract()
-        all = [Selector(text=x) for x in all_text_list]
+        for link in resume_links:
+            yield scrapy.Request(
+                response.urljoin(link),
+                callback=self.parse_item,
+                dont_filter=True
+            )
 
-        for field in all:
-            name = field.xpath('//div/b/text()').extract_first()
-            Item = ResumeListItem()
+        next_page = response.xpath("//a[text()='Следующая']/@href").extract_first()
+        if next_page:
+            yield scrapy.Request(
+                response.urljoin(next_page),
+                callback=self.parse
+            )
+
+    def parse_item(self, response):
+        name = response.css('h1.cut-top::text').extract_first()
+
+        if name != "Личные данные скрыты":
+            Item = ResumeItem()
+
+            url = response.url
+            Item["id"] = url.split("/")[-2]
+            Item['url'] = url
             Item['name'] = name
-            # print(name)
+
+            data = response.css('.card-indent').extract_first()
+            Item['data'] = ' '.join(data.split())
+
             yield Item

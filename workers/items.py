@@ -1,7 +1,8 @@
 from scrapy.item import Item, Field
 
 
-class ResumeListItem(Item):
-    title = Field()
+class ResumeItem(Item):
+    id = Field()
     name = Field()
-    link = Field()
+    url = Field()
+    data = Field()
