@@ -5,5 +5,5 @@
 
 ## Usage ##
 * scrapy crawl resumelist
-this save result in db "data_scraped"
+* this save result in db "data_scraped"
 
